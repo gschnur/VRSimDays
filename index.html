@@ -66,6 +66,73 @@
     cursor: default;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   }
+  .static-list {
+    list-style: none;
+    padding: 0;
+  }
+  .static-list li {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+  }
+  /* Fixes the "faded" look of disabled elements for readability */
+  .static-list input[type="checkbox"]:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+  .static-list label {
+    color: #333333;
+    cursor: default;
+    margin-left: 8px;
+  }
+  .calculator {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-top: 12px;
+  }
+  .calculator .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px 20px;
+    margin-top: 8px;
+  }
+  .calculator .calc-field {
+    display: flex;
+    flex-direction: column;
+  }
+  .calculator label {
+    font-size: 0.85em;
+    color: #444;
+    margin-bottom: 4px;
+  }
+  .calculator input[type="number"] {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .calc-result {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+  .calc-result .headline {
+    font-size: 1.4em;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .calc-result .breakdown {
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: #555;
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
@@ -97,7 +164,23 @@
 <h2>Objective(s)</h2>
 Conduct a Time Atack Exhibition for bragging rights. Each driver will get an equal amount of acclimation time. Said time is for both learning the track and the car on that track. After acclimation while still fresh, a driver will go straight into hot laps. All drivers will have the same number of hot laps, only the best time will be counted.
 
-<h2>Proposed Format</h2>
+<h3>Things to Decide</h3>
+<ul class="static-list">
+  <li>
+    <input type="checkbox" id="item1" disabled>
+    <label for="item1">Number of Drivers</label>
+  </li>
+  <li>
+    <input type="checkbox" id="item2" disabled>
+    <label for="item1">Number of Acclimation/Hot Laps</label>
+  </li>
+  <li>
+    <input type="checkbox" id="item3" disabled>
+    <label for="item1">Number of Car & Track Combinations</label>
+  </li>
+</ul>
+
+<h3>Proposed Format</h3>
 <pre class="mermaid">
   flowchart LR
     A["Car & Track (x) Selected"] --> B["Driver (y) Start"]
@@ -108,6 +191,92 @@ Conduct a Time Atack Exhibition for bragging rights. Each driver will get an equ
     F -->|No, next driver| B
     F -->|Yes| A
 </pre>
+
+<h3>Event Time Calculator</h3>
+<div class="calculator">
+  <div class="calc-grid">
+    <div class="calc-field">
+      <label for="calc-drivers">Number of Drivers</label>
+      <input type="number" id="calc-drivers" min="1" value="4">
+    </div>
+    <div class="calc-field">
+      <label for="calc-combos">Car & Track Combinations</label>
+      <input type="number" id="calc-combos" min="1" value="1">
+    </div>
+    <div class="calc-field">
+      <label for="calc-acclim-laps">Acclimation Laps (per driver)</label>
+      <input type="number" id="calc-acclim-laps" min="0" value="3">
+    </div>
+    <div class="calc-field">
+      <label for="calc-hot-laps">Hot Laps (per driver)</label>
+      <input type="number" id="calc-hot-laps" min="1" value="3">
+    </div>
+    <div class="calc-field">
+      <label for="calc-lap-time">Estimated Lap Time (seconds)</label>
+      <input type="number" id="calc-lap-time" min="1" value="70">
+    </div>
+    <div class="calc-field">
+      <label for="calc-changeover">Driver Changeover Time (seconds)</label>
+      <input type="number" id="calc-changeover" min="0" value="90">
+    </div>
+    <div class="calc-field">
+      <label for="calc-combo-change">Combo Changeover Time (minutes, between car/track swaps)</label>
+      <input type="number" id="calc-combo-change" min="0" value="10">
+    </div>
+  </div>
+  <div class="calc-result">
+    <div class="headline" id="calc-total">Total Minimum Time: --</div>
+    <div class="breakdown" id="calc-breakdown"></div>
+  </div>
+</div>
+
+<script>
+  function formatDuration(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.round((totalSeconds % 3600) / 60);
+    if (h > 0) {
+      return h + "h " + m + "m";
+    }
+    return m + "m";
+  }
+
+  function calcEventTime() {
+    const drivers = parseFloat(document.getElementById('calc-drivers').value) || 0;
+    const combos = parseFloat(document.getElementById('calc-combos').value) || 0;
+    const acclimLaps = parseFloat(document.getElementById('calc-acclim-laps').value) || 0;
+    const hotLaps = parseFloat(document.getElementById('calc-hot-laps').value) || 0;
+    const lapTime = parseFloat(document.getElementById('calc-lap-time').value) || 0;
+    const changeover = parseFloat(document.getElementById('calc-changeover').value) || 0;
+    const comboChangeMin = parseFloat(document.getElementById('calc-combo-change').value) || 0;
+
+    // Time on-track per driver, per combo (acclimation + hot laps)
+    const perDriverSeconds = (acclimLaps + hotLaps) * lapTime;
+
+    // All drivers through one combo, including changeover between each driver
+    const perComboDrivingSeconds = drivers * perDriverSeconds;
+    const perComboChangeoverSeconds = drivers > 0 ? (drivers - 1) * changeover : 0;
+    const perComboSeconds = perComboDrivingSeconds + perComboChangeoverSeconds;
+
+    // All combos, including changeover time between combos (car/track swap)
+    const totalDrivingSeconds = combos * perComboSeconds;
+    const totalComboChangeSeconds = combos > 0 ? (combos - 1) * comboChangeMin * 60 : 0;
+    const totalSeconds = totalDrivingSeconds + totalComboChangeSeconds;
+
+    document.getElementById('calc-total').textContent =
+      "Total Minimum Time: " + formatDuration(totalSeconds);
+
+    document.getElementById('calc-breakdown').innerHTML =
+      "Per driver, per combo: " + (acclimLaps + hotLaps) + " laps &times; " + lapTime + "s = " + formatDuration(perDriverSeconds) + "<br>" +
+      "Per combo (" + drivers + " drivers + " + Math.max(drivers - 1, 0) + " changeovers): " + formatDuration(perComboSeconds) + "<br>" +
+      "All " + combos + " combo(s) driving time: " + formatDuration(totalDrivingSeconds) + "<br>" +
+      "Combo-to-combo changeover time: " + formatDuration(totalComboChangeSeconds);
+  }
+
+  document.querySelectorAll('.calculator input').forEach(function(input) {
+    input.addEventListener('input', calcEventTime);
+  });
+  calcEventTime();
+</script>
 
 <h2>Cars</h2>
 <table>
