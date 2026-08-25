@@ -31,7 +31,7 @@ const TRACKS = [
 
 // State Array for the live table selection rows
 let activeCombos = [
-    { carId: "mazda_mx5_global", trackId: "lime_rock_gp" }
+    //{ carId: "mazda_mx5_global", trackId: "lime_rock_gp" }
 ];
 
 // Document Object Selectors

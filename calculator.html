@@ -7,27 +7,160 @@
     <!-- Tailwind CSS Fallback CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Hardcoded Native CSS overrides ensure dark theme works completely offline/locally -->
+<!-- NATIVE FIXED FALLBACK CSS: Guarantees centering, font weights, sizes, and colors globally -->
     <style>
-        #dynamic-calculator-wrapper {
-            background-color: #12131a !important;
-            color: #d1d5db !important;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        /* Global Background Reset - Matches your dark theme setup */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1150px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #1a1a1a;
+            line-height: 1.5;
         }
+
+        h1 {
+            display: block;
+            font-size: 2em;
+            margin-block-start: 0.67em;
+            margin-block-end: 0.67em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-weight: bold;
+        }
+
+        h2 {
+            display: block;
+            font-size: 1.5em;
+            margin-block-start: 0.83em;
+            margin-block-end: 0.83em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-weight: bold;
+        }
+
+        h3 {
+            display: block;
+            font-size: 1.17em;
+            margin-block-start: 1em;
+            margin-block-end: 1em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-weight: bold;
+        }
+
+        img {
+            max-width: 160px;
+            height: auto;
+            display: block;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.15s ease;
+        }
+        img:hover {
+            opacity: 0.85;
+        }
+
+        /* Enforce horizontal layout alignment centering across servers */
+        .main-wrapper-centered {
+            max-width: 1150px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Structural Container Blocks */
         .bg-card-dark { background-color: #1a1c26 !important; }
         .bg-input-dark { background-color: #13141f !important; }
         .bg-header-dark { background-color: #1e212d !important; }
         .bg-stat-dark { background-color: #151722 !important; }
-        .border-gray-800-force { border-color: #1f2937 !important; }
+
+        /* Unified border control to maintain thin slate dividers */
+        .border-gray-800-force {
+            border: 1px solid #2d3142 !important;
+        }
+        .border-b-only {
+            border-bottom: 1px solid #2d3142 !important;
+        }
+
+        /* Custom Text Aura Glow effect for the digital clock output */
         .text-red-glow {
             color: #ef4444 !important;
             text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+
+        /* ==========================================================================
+        SCOPED TABLE STYLING
+        These rules will ONLY apply if elements are nested inside a .sim-calc-wrapper
+        ========================================================================== */
+
+        .sim-calc-wrapper h1,
+        .forced-h1 {
+            font-size: 1.5rem !important; /* 24px */
+            font-weight: 800 !important;
+            letter-spacing: 0.05em !important;
+            color: #ffffff !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .sim-calc-wrapper h2,
+        .forced-h2 {
+            font-size: 1.125rem !important; /* 18px */
+            font-weight: 700 !important;
+            letter-spacing: 0.025em !important;
+            margin: 0 0 16px 0 !important;
+        }
+
+        .sim-calc-wrapper table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            background-color: #1a1c26 !important;
+
+        }
+
+        .sim-calc-wrapper th {
+            background-color: #151722 !important;
+            color: #9ca3af !important;
+            font-size: 10px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            border: none !important;
+            border-width: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            padding: 14px 20px;
+        }
+
+        /* Force EVERY table row inside the calculator to match the card theme background */
+        .sim-calc-wrapper #comboTableBody tr,
+        .sim-calc-wrapper #comboTableBody tr:nth-child(odd),
+        .sim-calc-wrapper #comboTableBody tr:nth-child(even) {
+            background-color: #1a1c26 !important;
+        }
+
+        /* Row-level reactive hover background color change */
+        .sim-calc-wrapper #comboTableBody tr:hover {
+            background-color: #222533 !important;
+            transition: background-color 0.15s ease;
+        }
+
+        .sim-calc-wrapper td {
+            border: none !important;
+            border-width: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            padding: 14px 20px; /* Maintains clean spacing without borders */
         }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8 antialiased">
 
-    <div class="max-w-6xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6 sim-calc-wrapper main-wrapper-centered">
 
         <!-- Header Banner Card -->
         <div class="bg-card-dark p-6 rounded-2xl border border-gray-800-force shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -48,7 +181,7 @@
 
             <!-- Left Dashboard Config Panel -->
             <div class="lg:col-span-1 bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl space-y-5">
-                <h2 class="text-sm font-bold uppercase tracking-wider text-red-400 border-b border-gray-800-force pb-3 flex items-center gap-2">
+                <h2 class="sim-calc-wrapper text-sm font-bold uppercase tracking-wider text-red-400 border-b border-gray-800-force pb-3 flex items-center gap-2">
                     🛠️ Event Parameters
                 </h2>
 
@@ -86,7 +219,7 @@
 
                 <!-- Quick Entry Dropdown Form Card -->
                 <div class="bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl">
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4 flex items-center gap-2">
+                    <h2 class=".sim-calc-wrapper text-sm font-bold uppercase tracking-wider text-gray-300 mb-4 flex items-center gap-2">
                         ➕ Add Car & Track Combination
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
