@@ -205,89 +205,42 @@ Conduct a Time Atack Exhibition for bragging rights. Each driver will get an equ
 </pre>
 
 <h3>Event Time Calculator</h3>
-<div class="calculator">
-  <div class="calc-grid">
-    <div class="calc-field">
-      <label for="calc-drivers">Number of Drivers</label>
-      <input type="number" id="calc-drivers" min="1" value="4">
-    </div>
-    <div class="calc-field">
-      <label for="calc-combos">Car & Track Combinations</label>
-      <input type="number" id="calc-combos" min="1" value="1">
-    </div>
-    <div class="calc-field">
-      <label for="calc-acclim-laps">Acclimation Laps (per driver)</label>
-      <input type="number" id="calc-acclim-laps" min="0" value="3">
-    </div>
-    <div class="calc-field">
-      <label for="calc-hot-laps">Hot Laps (per driver)</label>
-      <input type="number" id="calc-hot-laps" min="1" value="3">
-    </div>
-    <div class="calc-field">
-      <label for="calc-lap-time">Estimated Lap Time (seconds)</label>
-      <input type="number" id="calc-lap-time" min="1" value="70">
-    </div>
-    <div class="calc-field">
-      <label for="calc-changeover">Driver Changeover Time (seconds)</label>
-      <input type="number" id="calc-changeover" min="0" value="90">
-    </div>
-    <div class="calc-field">
-      <label for="calc-combo-change">Combo Changeover Time (minutes, between car/track swaps)</label>
-      <input type="number" id="calc-combo-change" min="0" value="10">
-    </div>
-  </div>
-  <div class="calc-result">
-    <div class="headline" id="calc-total">Total Minimum Time: --</div>
-    <div class="breakdown" id="calc-breakdown"></div>
-  </div>
-</div>
+<!-- Target container where the app will inject -->
+<div id="dynamic-calculator-wrapper"></div>
 
 <script>
-  function formatDuration(totalSeconds) {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.round((totalSeconds % 3600) / 60);
-    if (h > 0) {
-      return h + "h " + m + "m";
-    }
-    return m + "m";
-  }
+    document.addEventListener("DOMContentLoaded", function() {
+        const targetDiv = document.getElementById("dynamic-calculator-wrapper");
 
-  function calcEventTime() {
-    const drivers = parseFloat(document.getElementById('calc-drivers').value) || 0;
-    const combos = parseFloat(document.getElementById('calc-combos').value) || 0;
-    const acclimLaps = parseFloat(document.getElementById('calc-acclim-laps').value) || 0;
-    const hotLaps = parseFloat(document.getElementById('calc-hot-laps').value) || 0;
-    const lapTime = parseFloat(document.getElementById('calc-lap-time').value) || 0;
-    const changeover = parseFloat(document.getElementById('calc-changeover').value) || 0;
-    const comboChangeMin = parseFloat(document.getElementById('calc-combo-change').value) || 0;
+        // Fetch the external calculator layout file asynchronously
+        fetch("./calculator.html")
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Calculator file could not be fetched.");
+                }
+                return response.text();
+            })
+            .then(htmlContent => {
+                // 1. Inject the HTML and custom styling blocks into the wrapper
+                targetDiv.innerHTML = htmlContent;
 
-    // Time on-track per driver, per combo (acclimation + hot laps)
-    const perDriverSeconds = (acclimLaps + hotLaps) * lapTime;
-
-    // All drivers through one combo, including changeover between each driver
-    const perComboDrivingSeconds = drivers * perDriverSeconds;
-    const perComboChangeoverSeconds = drivers > 0 ? (drivers - 1) * changeover : 0;
-    const perComboSeconds = perComboDrivingSeconds + perComboChangeoverSeconds;
-
-    // All combos, including changeover time between combos (car/track swap)
-    const totalDrivingSeconds = combos * perComboSeconds;
-    const totalComboChangeSeconds = combos > 0 ? (combos - 1) * comboChangeMin * 60 : 0;
-    const totalSeconds = totalDrivingSeconds + totalComboChangeSeconds;
-
-    document.getElementById('calc-total').textContent =
-      "Total Minimum Time: " + formatDuration(totalSeconds);
-
-    document.getElementById('calc-breakdown').innerHTML =
-      "Per driver, per combo: " + (acclimLaps + hotLaps) + " laps &times; " + lapTime + "s = " + formatDuration(perDriverSeconds) + "<br>" +
-      "Per combo (" + drivers + " drivers + " + Math.max(drivers - 1, 0) + " changeovers): " + formatDuration(perComboSeconds) + "<br>" +
-      "All " + combos + " combo(s) driving time: " + formatDuration(totalDrivingSeconds) + "<br>" +
-      "Combo-to-combo changeover time: " + formatDuration(totalComboChangeSeconds);
-  }
-
-  document.querySelectorAll('.calculator input').forEach(function(input) {
-    input.addEventListener('input', calcEventTime);
-  });
-  calcEventTime();
+                // 2. Extract and manually initialize any inline app scripts
+                const scripts = targetDiv.querySelectorAll("script");
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    document.body.appendChild(newScript);
+                });
+            })
+            .catch(error => {
+                console.error("Error loading the simulator panel:", error);
+                targetDiv.innerHTML = `<p style="color: #ef4444; padding: 20px; border: 1px solid #ef4444; background: rgba(239,68,68,0.1); border-radius: 8px;">⚠️ Failed to load the interactive calculator component.</p>`;
+            });
+    });
 </script>
 
 <h2>Cars</h2>
