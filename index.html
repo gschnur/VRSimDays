@@ -87,10 +87,27 @@
   }
 </script>
 
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script>
+
 <h1>VR Sim Racing Day: 08/29/2026</h1>
 
 <h2>Objective(s)</h2>
+Conduct a Time Atack Exhibition for bragging rights. Each driver will get an equal amount of acclimation time. Said time is for both learning the track and the car on that track. After acclimation while still fresh, a driver will go straight into hot laps. All drivers will have the same number of hot laps, only the best time will be counted.
 
+<h2>Proposed Format</h2>
+<pre class="mermaid">
+  flowchart LR
+    A["Car & Track (x) Selected"] --> B["Driver (y) Start"]
+    B --> C["Acclimation Laps/Time (z)"]
+    C --> D["Hot Laps/Time (z)"]
+    D --> E[Time Recorded]
+    E --> F{All drivers done?}
+    F -->|No, next driver| B
+    F -->|Yes| A
+</pre>
 
 <h2>Cars</h2>
 <table>
@@ -98,20 +115,23 @@
     <tr>
       <th>Make</th>
       <th>Model</th>
+      <th>ABS</th>
       <th>Shift Style</th>
       <th>Clutch Use</th>
+      <th>sp_v_MX-5</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td>BMW</td><td>M2 CS Racing (F87) – 2020</td><td>Paddle</td><td>Never</td></tr>
-    <tr><td>BMW</td><td>M2 Racing (G87)</td><td>Paddle</td><td>Never</td></tr>
-    <tr><td>Mazda</td><td>Global MX-5 Cup</td><td>Paddle</td><td>Never</td></tr>
-    <tr><td>Mazda</td><td>[Legacy] MX-5 Cup &amp; Roadster – 2010</td><td>H-patter</td><td>Always</td></tr>
-    <tr><td>Toyota</td><td>GR86 (cup)</td><td>Paddle</td><td>Start</td></tr>
-    <tr><td>Porsche</td><td>718 Cayman GT4 Clubsport MR</td><td>Paddle</td><td>Never</td></tr>
-    <tr><td>Porsche</td><td>911 RSR</td><td>Paddle</td><td>Never</td></tr>
+    <tr><td>BMW</td><td>M2 CS Racing (F87) – 2020</td><td>YES</td><td>Paddle</td><td>Never</td><td>-3.5*</td></tr>
+    <tr><td>BMW</td><td>M2 Racing (G87)</td><td>YES</td><td>Paddle</td><td>Never</td><td>-4.5*</td></tr>
+    <tr><td>Mazda</td><td>Global MX-5 Cup</td><td>YES</td><td>Paddle</td><td>Never</td><td>0.0</td></tr>
+    <tr><td>Mazda</td><td>[Legacy] MX-5 Cup &amp; Roadster – 2010</td><td>YES</td><td>H-patter</td><td>Always</td><td>+1.5*</td></tr>
+    <tr><td>Toyota</td><td>GR86 (cup)</td><td>YES</td><td>Paddle</td><td>Start</td><td>-0.5</td></tr>
+    <tr><td>Porsche</td><td>718 Cayman GT4 Clubsport MR</td><td>YES</td><td>Paddle</td><td>Never</td><td>-7.0*</td></tr>
+    <tr><td>Porsche</td><td>911 RSR</td><td>NO</td><td>Paddle</td><td>Never</td><td>-13.5*</td></tr>
   </tbody>
 </table>
+<p style="font-size: 0.85em; color: #666; margin-top: 8px;">sp_v_MX-5 = estimated delta in seconds around Lime Rock Park – Grand Prix vs. the Global Mazda MX-5 Cup (negative = faster, positive = slower). Values without an asterisk (Mazda Global MX-5 Cup, Toyota GR86) are based on directly sourced Track Titan "fast driver" benchmark laps. Values marked with * have no direct Track Titan benchmark for this exact car/track and are estimated from comparable class pace — treat as rough guides only.</p>
 
 <h2>Tracks</h2>
 <table>
@@ -120,26 +140,27 @@
       <th>Track Name</th>
       <th>Configuration</th>
       <th>Size</th>
+      <th>BG Time (MX-5)</th>
       <th>Track Image</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td>Lime Rock Park</td><td>Grand Prix</td><td>1.53</td><td><img src="./LimeRock-GrandPrix.png" alt="Lime Rock Park - Grand Prix" onclick="openModal('./LimeRock-GrandPrix.png', 'Lime Rock Park - Grand Prix')"></td></tr>
-    <tr><td>Red Bull Ring</td><td>Grand Prix</td><td>2.68</td><td><img src="./RedBullRing-GrandPrix.png" alt="Red Bull Ring - Grand Prix" onclick="openModal('./RedBullRing-GrandPrix.png', 'Red Bull Ring - Grand Prix')"></td></tr>
-    <tr><td>Red Bull Ring</td><td>National</td><td>1.45</td><td><img src="./RedBullRing-National.png" alt="Red Bull Ring - National" onclick="openModal('./RedBullRing-National.png', 'Red Bull Ring - National')"></td></tr>
-    <tr><td>Red Bull Ring</td><td>North</td><td>1.14</td><td><img src="./RedBullRing-North.png" alt="Red Bull Ring - North" onclick="openModal('./RedBullRing-North.png', 'Red Bull Ring - North')"></td></tr>
-    <tr><td>Road Atlanta</td><td>Full Course</td><td>2.54</td><td><img src="./RoadAtlanta-FullCourse.png" alt="Road Atlanta - Full Course" onclick="openModal('./RoadAtlanta-FullCourse.png', 'Road Atlanta - Full Course')"></td></tr>
-    <tr><td>Road Atlanta</td><td>Club</td><td>1.81</td><td><img src="./RoadAtlanta-Club.png" alt="Road Atlanta - Club" onclick="openModal('./RoadAtlanta-Club.png', 'Road Atlanta - Club')"></td></tr>
-    <tr><td>Road Atlanta</td><td>Short</td><td>1.76</td><td><img src="./RoadAtlanta-Short.png" alt="Road Atlanta - Short" onclick="openModal('./RoadAtlanta-Short.png', 'Road Atlanta - Short')"></td></tr>
-    <tr><td>Laguna Seca</td><td></td><td>2.23</td><td><img src="./LagunaSeca.png" alt="Laguna Seca" onclick="openModal('./LagunaSeca.png', 'Laguna Seca')"></td></tr>
-    <tr><td>Suzuka</td><td>Grand Prix</td><td>3.6</td><td><img src="./Suzuka-GrandPrix.png" alt="Suzuka - Grand Prix" onclick="openModal('./Suzuka-GrandPrix.png', 'Suzuka - Grand Prix')"></td></tr>
-    <tr><td>Suzuka</td><td>East</td><td>1.39</td><td><img src="./Suzuka-East.png" alt="Suzuka - East" onclick="openModal('./Suzuka-East.png', 'Suzuka - East')"></td></tr>
-    <tr><td>Suzuka</td><td>West</td><td>2.15</td><td><img src="./Suzuka-West.png" alt="Suzuka - West" onclick="openModal('./Suzuka-West.png', 'Suzuka - West')"></td></tr>
-    <tr><td>Tsukuba</td><td>2000 Full</td><td>1.27</td><td><img src="./Tsukuba-2000Full.png" alt="Tsukuba - 2000 Full" onclick="openModal('./Tsukuba-2000Full.png', 'Tsukuba - 2000 Full')"></td></tr>
-    <tr><td>Virginia International</td><td>Full Course</td><td>3.27</td><td><img src="./VirginiaInternations-FullCourse.png" alt="Virginia International - Full Course" onclick="openModal('./VirginiaInternations-FullCourse.png', 'Virginia International - Full Course')"></td></tr>
-    <tr><td>Phoenix Raceway</td><td>Road Course</td><td>1.51</td><td><img src="./PhoenixRaceway-RoadCourse.png" alt="Phoenix Raceway - Road Course" onclick="openModal('./PhoenixRaceway-RoadCourse.png', 'Phoenix Raceway - Road Course')"></td></tr>
-    <tr><td>Daytona</td><td>Road Course</td><td>3.56</td><td><img src="./Daytona-RoadCourse.png" alt="Daytona - Road Course" onclick="openModal('./Daytona-RoadCourse.png', 'Daytona - Road Course')"></td></tr>
-    <tr><td>Mount Pnorama Circuit</td><td></td><td>3.86</td><td><img src="./MountPanorama.png" alt="Mount Panorama Circuit" onclick="openModal('./MountPanorama.png', 'Mount Panorama Circuit')"></td></tr>
+    <tr><td>Lime Rock Park</td><td>Grand Prix</td><td>1.53</td><td>1:01.575</td><td><img src="./LimeRock-GrandPrix.png" alt="Lime Rock Park - Grand Prix" onclick="openModal('./LimeRock-GrandPrix.png', 'Lime Rock Park - Grand Prix')"></td></tr>
+    <tr><td>Red Bull Ring</td><td>Grand Prix</td><td>2.68</td><td>1:51.067</td><td><img src="./RedBullRing-GrandPrix.png" alt="Red Bull Ring - Grand Prix" onclick="openModal('./RedBullRing-GrandPrix.png', 'Red Bull Ring - Grand Prix')"></td></tr>
+    <tr><td>Red Bull Ring</td><td>National</td><td>1.45</td><td>0:59.739</td><td><img src="./RedBullRing-National.png" alt="Red Bull Ring - National" onclick="openModal('./RedBullRing-National.png', 'Red Bull Ring - National')"></td></tr>
+    <tr><td>Red Bull Ring</td><td>North</td><td>1.14</td><td>0:56.511</td><td><img src="./RedBullRing-North.png" alt="Red Bull Ring - North" onclick="openModal('./RedBullRing-North.png', 'Red Bull Ring - North')"></td></tr>
+    <tr><td>Road Atlanta</td><td>Full Course</td><td>2.54</td><td>1:37.847</td><td><img src="./RoadAtlanta-FullCourse.png" alt="Road Atlanta - Full Course" onclick="openModal('./RoadAtlanta-FullCourse.png', 'Road Atlanta - Full Course')"></td></tr>
+    <tr><td>Road Atlanta</td><td>Club</td><td>1.81</td><td>~1:08.4*</td><td><img src="./RoadAtlanta-Club.png" alt="Road Atlanta - Club" onclick="openModal('./RoadAtlanta-Club.png', 'Road Atlanta - Club')"></td></tr>
+    <tr><td>Road Atlanta</td><td>Short</td><td>1.76</td><td>1:06.421</td><td><img src="./RoadAtlanta-Short.png" alt="Road Atlanta - Short" onclick="openModal('./RoadAtlanta-Short.png', 'Road Atlanta - Short')"></td></tr>
+    <tr><td>Laguna Seca</td><td></td><td>2.23</td><td>1:39.629</td><td><img src="./LagunaSeca.png" alt="Laguna Seca" onclick="openModal('./LagunaSeca.png', 'Laguna Seca')"></td></tr>
+    <tr><td>Suzuka</td><td>Grand Prix</td><td>3.6</td><td>2:27.127</td><td><img src="./Suzuka-GrandPrix.png" alt="Suzuka - Grand Prix" onclick="openModal('./Suzuka-GrandPrix.png', 'Suzuka - Grand Prix')"></td></tr>
+    <tr><td>Suzuka</td><td>East</td><td>1.39</td><td>0:58.673</td><td><img src="./Suzuka-East.png" alt="Suzuka - East" onclick="openModal('./Suzuka-East.png', 'Suzuka - East')"></td></tr>
+    <tr><td>Suzuka</td><td>West</td><td>2.15</td><td>1:31.734</td><td><img src="./Suzuka-West.png" alt="Suzuka - West" onclick="openModal('./Suzuka-West.png', 'Suzuka - West')"></td></tr>
+    <tr><td>Tsukuba</td><td>2000 Full</td><td>1.27</td><td>1:03.863</td><td><img src="./Tsukuba-2000Full.png" alt="Tsukuba - 2000 Full" onclick="openModal('./Tsukuba-2000Full.png', 'Tsukuba - 2000 Full')"></td></tr>
+    <tr><td>Virginia International</td><td>Full Course</td><td>3.27</td><td>2:11.200</td><td><img src="./VirginiaInternations-FullCourse.png" alt="Virginia International - Full Course" onclick="openModal('./VirginiaInternations-FullCourse.png', 'Virginia International - Full Course')"></td></tr>
+    <tr><td>Phoenix Raceway</td><td>Road Course</td><td>1.51</td><td>1:08.354</td><td><img src="./PhoenixRaceway-RoadCourse.png" alt="Phoenix Raceway - Road Course" onclick="openModal('./PhoenixRaceway-RoadCourse.png', 'Phoenix Raceway - Road Course')"></td></tr>
+    <tr><td>Daytona</td><td>Road Course</td><td>3.56</td><td>~2:22.0*</td><td><img src="./Daytona-RoadCourse.png" alt="Daytona - Road Course" onclick="openModal('./Daytona-RoadCourse.png', 'Daytona - Road Course')"></td></tr>
+    <tr><td>Mount Pnorama Circuit</td><td></td><td>3.86</td><td>2:35.818</td><td><img src="./MountPanorama.png" alt="Mount Panorama Circuit" onclick="openModal('./MountPanorama.png', 'Mount Panorama Circuit')"></td></tr>
   </tbody>
 </table>
 
