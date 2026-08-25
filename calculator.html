@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Sim Racing Event Time Calculator</title>
+    <!-- Tailwind CSS Fallback CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Hardcoded Native CSS overrides ensure dark theme works completely offline/locally -->
+    <style>
+        body {
+            background-color: #12131a !important;
+            color: #d1d5db !important;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .bg-card-dark { background-color: #1a1c26 !important; }
+        .bg-input-dark { background-color: #13141f !important; }
+        .bg-header-dark { background-color: #1e212d !important; }
+        .bg-stat-dark { background-color: #151722 !important; }
+        .border-gray-800-force { border-color: #1f2937 !important; }
+        .text-red-glow {
+            color: #ef4444 !important;
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 antialiased">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+
+        <!-- Header Banner Card -->
+        <div class="bg-card-dark p-6 rounded-2xl border border-gray-800-force shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white flex items-center gap-2">
+                    <span class="text-red-500">🏎️</span> VR SIM RACING SCHEDULE MANAGEMENT
+                </h1>
+                <p class="text-gray-400 text-xs mt-1">Configure event layouts dynamically with custom delta calculations and live race tracking benchmarks.</p>
+            </div>
+            <!-- Main Live Aggregate Time Widget Badge -->
+            <div class="bg-stat-dark border border-red-500/30 px-6 py-3 rounded-xl text-center md:text-right min-w-[200px]">
+                <span class="block text-[10px] uppercase text-gray-400 tracking-wider font-semibold mb-0.5">Total Minimum Time</span>
+                <span id="totalTimeDisplay" class="text-2xl font-black text-red-glow tracking-tight">0h 0m 0s</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Dashboard Config Panel -->
+            <div class="lg:col-span-1 bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl space-y-5">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-red-400 border-b border-gray-800-force pb-3 flex items-center gap-2">
+                    🛠️ Event Parameters
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Number of Drivers</label>
+                        <input type="number" id="numDrivers" value="4" min="1" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Acclimation Laps</label>
+                            <input type="number" id="accLaps" value="3" min="0" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Hot Laps</label>
+                            <input type="number" id="hotLaps" value="3" min="1" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Driver Changeover <span class="text-gray-500 text-[10px]">(seconds)</span></label>
+                        <input type="number" id="driverChange" value="90" min="0" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">Combo Swap Buffer <span class="text-gray-500 text-[10px]">(minutes)</span></label>
+                        <input type="number" id="comboChange" value="10" min="0" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Interactive Dynamic List Grid Panel -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Quick Entry Dropdown Form Card -->
+                <div class="bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4 flex items-center gap-2">
+                        ➕ Add Car & Track Combination
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[11px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">Select Vehicle Class</label>
+                            <select id="carSelect" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-red-500 transition-colors cursor-pointer"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">Select Track & Config</label>
+                            <select id="trackSelect" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-red-500 transition-colors cursor-pointer"></select>
+                        </div>
+                    </div>
+                    <button id="addComboBtn" class="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-widest py-3 rounded-xl transition duration-150 shadow-lg shadow-red-900/20 active:translate-y-[1px]">
+                        Add Combo to Event Schedule
+                    </button>
+                </div>
+
+                <!-- Active Combo Dynamic Datagrid Data Box -->
+                <div class="bg-card-dark rounded-2xl border border-gray-800-force shadow-xl overflow-hidden">
+                    <div class="px-5 py-4 bg-header-dark border-b border-gray-800-force flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Active Layout Matrix</span>
+                        <span class="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-mono uppercase font-semibold">Calculated Live</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr class="bg-stat-dark text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800-force">
+                                    <th class="py-3.5 px-5 font-bold">Car Variant</th>
+                                    <th class="py-3.5 px-5 font-bold">Track & Configuration</th>
+                                    <th class="py-3.5 px-5 font-bold text-right">Est. Lap Time</th>
+                                    <th class="py-3.5 px-5 font-bold text-center w-20">Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comboTableBody" class="divide-y divide-gray-800 text-xs text-gray-300">
+                                <!-- Generated Dynamically by app.js Logic -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="p-12 text-center text-gray-500 text-xs hidden">
+                        📭 Your event timeline is empty. Select configurations above to generate dynamic time estimations.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Links the existing script file logic -->
+    <script src="app.js"></script>
+</body>
+</html>
