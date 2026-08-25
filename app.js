@@ -38,6 +38,7 @@ let activeCombos = [
 const carSelect = document.getElementById("carSelect");
 const trackSelect = document.getElementById("trackSelect");
 const addComboBtn = document.getElementById("addComboBtn");
+const exportScheduleBtn = document.getElementById("exportScheduleBtn");
 const comboTableBody = document.getElementById("comboTableBody");
 const emptyState = document.getElementById("emptyState");
 
@@ -60,6 +61,7 @@ function init() {
     });
 
     addComboBtn.addEventListener("click", addCombo);
+    exportScheduleBtn.addEventListener("click", exportEventSchedule);
     [numDriversInput, accLapsInput, hotLapsInput, driverChangeInput, comboChangeInput].forEach(input => {
         input.addEventListener("input", calculateEventTime);
     });
@@ -151,6 +153,56 @@ function calculateEventTime() {
     const secs = Math.round(totalSeconds % 60);
 
     totalTimeDisplay.innerText = `${hrs}h ${mins}m ${secs}s`;
+}
+
+// Build a blank driver/combo schedule from current config and download it as JSON
+function exportEventSchedule() {
+    const numDrivers = parseInt(numDriversInput.value) || 0;
+
+    if (numDrivers <= 0) {
+        alert("Set a number of drivers before exporting.");
+        return;
+    }
+    if (activeCombos.length === 0) {
+        alert("Add at least one car & track combo before exporting.");
+        return;
+    }
+
+    // Combos object: one entry per active combo, numbered in schedule order
+    const combos = activeCombos.map((item, index) => {
+        const car = CARS.find(c => c.id === item.carId);
+        const track = TRACKS.find(t => t.id === item.trackId);
+        const parTimeSeconds = track.baseSeconds + car.offset;
+        return {
+            comboNumber: index + 1,
+            car: car.name,
+            track: track.name,
+            parTime: formatSecondsToMMSS(parTimeSeconds),
+            parTimeSeconds: Math.round(parTimeSeconds * 1000) / 1000
+        };
+    });
+
+    // Drivers object: one blank row per driver, with an empty time field per combo number
+    const drivers = [];
+    for (let i = 0; i < numDrivers; i++) {
+        const driver = { name: "" };
+        combos.forEach(combo => {
+            driver[`combo${combo.comboNumber}`] = null;
+        });
+        drivers.push(driver);
+    }
+
+    const schedule = { drivers, combos };
+
+    const blob = new Blob([JSON.stringify(schedule, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "event-schedule.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // Launch application script tracking execution

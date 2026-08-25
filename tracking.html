@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Sim Racing Live Event Tracking</title>
+    <!-- Tailwind CSS Fallback CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+<!-- NATIVE FIXED FALLBACK CSS: Guarantees centering, font weights, sizes, and colors globally -->
+    <style>
+        /* Global Background Reset - Matches the calculator's dark theme setup */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1150px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+
+        h1 {
+            display: block;
+            font-size: 2em;
+            margin-block-start: 0.67em;
+            margin-block-end: 0.67em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-weight: bold;
+        }
+
+        h2 {
+            display: block;
+            font-size: 1.5em;
+            margin-block-start: 0.83em;
+            margin-block-end: 0.83em;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            font-weight: bold;
+        }
+
+        /* Enforce horizontal layout alignment centering across servers */
+        .main-wrapper-centered {
+            max-width: 1150px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Structural Container Blocks */
+        .bg-card-dark { background-color: #1a1c26 !important; }
+        .bg-input-dark { background-color: #13141f !important; }
+        .bg-header-dark { background-color: #1e212d !important; }
+        .bg-stat-dark { background-color: #151722 !important; }
+
+        /* Unified border control to maintain thin slate dividers */
+        .border-gray-800-force {
+            border: 1px solid #2d3142 !important;
+        }
+        .border-b-only {
+            border-bottom: 1px solid #2d3142 !important;
+        }
+
+        /* Custom Text Aura Glow effect for the digital clock output */
+        .text-red-glow {
+            color: #ef4444 !important;
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+        .text-emerald-glow {
+            color: #34d399 !important;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.35);
+        }
+
+        /* ==========================================================================
+        SCOPED TABLE STYLING - only applies inside .sim-calc-wrapper
+        ========================================================================== */
+
+        .sim-calc-wrapper h1,
+        .forced-h1 {
+            font-size: 1.5rem !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.05em !important;
+            color: #ffffff !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .sim-calc-wrapper h2,
+        .forced-h2 {
+            font-size: 1.125rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.025em !important;
+            margin: 0 0 16px 0 !important;
+        }
+
+        .sim-calc-wrapper table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            background-color: #1a1c26 !important;
+        }
+
+        .sim-calc-wrapper th {
+            background-color: #151722 !important;
+            color: #9ca3af !important;
+            font-size: 10px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            border: none !important;
+            border-width: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            padding: 14px 16px;
+        }
+
+        .sim-calc-wrapper #trackingTableBody tr,
+        .sim-calc-wrapper #trackingTableBody tr:nth-child(odd),
+        .sim-calc-wrapper #trackingTableBody tr:nth-child(even) {
+            background-color: #1a1c26 !important;
+        }
+
+        .sim-calc-wrapper #trackingTableBody tr:hover {
+            background-color: #222533 !important;
+            transition: background-color 0.15s ease;
+        }
+
+        .sim-calc-wrapper td {
+            border: none !important;
+            border-width: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            padding: 10px 16px;
+        }
+
+        .time-input {
+            width: 92px;
+        }
+        .time-input.is-invalid {
+            border-color: #ef4444 !important;
+            color: #f87171 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 antialiased">
+
+    <div class="max-w-6xl mx-auto space-y-6 sim-calc-wrapper main-wrapper-centered">
+
+        <!-- Header Banner Card -->
+        <div class="bg-card-dark p-6 rounded-2xl border border-gray-800-force shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white flex items-center gap-2">
+                    <span class="text-red-500">🏁</span> LIVE EVENT TIME TRACKING
+                </h1>
+                <p class="text-gray-400 text-xs mt-1">Log each driver's best time per combo and watch the standings update live.</p>
+                <p class="text-[10px] text-gray-500 mt-2 flex items-center gap-2">
+                    <span id="autosaveStatus">Not saved yet</span>
+                    <span class="text-gray-700">•</span>
+                    <button id="clearSavedBtn" class="text-gray-500 hover:text-red-400 underline underline-offset-2 transition-colors">Clear saved data</button>
+                </p>
+            </div>
+            <!-- Leader Widget Badge -->
+            <div class="bg-stat-dark border border-red-500/30 px-6 py-3 rounded-xl text-center md:text-right min-w-[220px]">
+                <span class="block text-[10px] uppercase text-gray-400 tracking-wider font-semibold mb-0.5">Current Leader</span>
+                <span id="leaderNameDisplay" class="block text-sm font-bold text-white truncate max-w-[220px]">No times yet</span>
+                <span id="leaderTimeDisplay" class="text-lg font-black text-emerald-glow tracking-tight">--</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Setup Panel -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <div class="bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl space-y-4">
+                    <h2 class="sim-calc-wrapper text-sm font-bold uppercase tracking-wider text-red-400 border-b border-gray-800-force pb-3 flex items-center gap-2">
+                        📥 Import Event Schedule
+                    </h2>
+                    <p class="text-[11px] text-gray-500">Load the <span class="text-gray-300 font-mono">event-schedule.json</span> exported from the Event Time Calculator to auto-fill drivers &amp; combos.</p>
+                    <input type="file" id="importFile" accept="application/json" class="hidden">
+                    <button id="importBtn" class="w-full bg-input-dark hover:bg-red-600 border border-gray-800-force hover:border-red-600 text-gray-300 hover:text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition duration-150 active:translate-y-[1px]">
+                        Choose Schedule File
+                    </button>
+                    <span id="importFileName" class="block text-[10px] text-gray-500 truncate"></span>
+                </div>
+
+                <div class="bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl space-y-4">
+                    <h2 class="sim-calc-wrapper text-sm font-bold uppercase tracking-wider text-gray-300 border-b border-gray-800-force pb-3 flex items-center gap-2">
+                        ➕ Add Car &amp; Track Combo
+                    </h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">Vehicle Class</label>
+                            <select id="carSelect" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-red-500 transition-colors cursor-pointer"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">Track &amp; Config</label>
+                            <select id="trackSelect" class="w-full bg-input-dark border border-gray-800-force rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-red-500 transition-colors cursor-pointer"></select>
+                        </div>
+                    </div>
+                    <button id="addComboBtn" class="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition duration-150 shadow-lg shadow-red-900/20 active:translate-y-[1px]">
+                        Add Combo
+                    </button>
+                </div>
+
+                <div class="bg-card-dark p-5 rounded-2xl border border-gray-800-force shadow-xl space-y-4">
+                    <h2 class="sim-calc-wrapper text-sm font-bold uppercase tracking-wider text-gray-300 border-b border-gray-800-force pb-3 flex items-center gap-2">
+                        🧑‍✈️ Drivers
+                    </h2>
+                    <button id="addDriverBtn" class="w-full bg-input-dark hover:bg-red-600 border border-gray-800-force hover:border-red-600 text-gray-300 hover:text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition duration-150 active:translate-y-[1px]">
+                        Add Driver
+                    </button>
+                    <p class="text-[11px] text-gray-500">Time format: <span class="text-gray-300 font-mono">m:ss.sss</span> or plain seconds. Leave blank until an attempt is set.</p>
+                </div>
+
+            </div>
+
+            <!-- Right Tracking + Standings Panel -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Event Time Tracking Table -->
+                <div class="bg-card-dark rounded-2xl border border-gray-800-force shadow-xl overflow-hidden">
+                    <div class="px-5 py-4 bg-header-dark border-b border-gray-800-force flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Event Time Tracking</span>
+                            <span class="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-mono uppercase font-semibold">Live</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="exportTrackingCsvBtn" class="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-input-dark border border-gray-800-force hover:border-red-600 hover:text-white text-gray-300 transition-colors">
+                                Export CSV
+                            </button>
+                            <button id="exportTrackingJsonBtn" class="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-input-dark border border-gray-800-force hover:border-red-600 hover:text-white text-gray-300 transition-colors">
+                                Export JSON
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr id="trackingTableHead" class="bg-stat-dark text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800-force">
+                                    <th class="py-3.5 px-4 font-bold sticky left-0 bg-stat-dark z-10">Driver</th>
+                                    <!-- Combo columns injected dynamically -->
+                                    <th class="py-3.5 px-4 font-bold text-right">Total</th>
+                                    <th class="py-3.5 px-4 font-bold text-center w-16">Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trackingTableBody" class="divide-y divide-gray-800 text-xs text-gray-300">
+                                <!-- Generated Dynamically by tracking.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="p-12 text-center text-gray-500 text-xs">
+                        📭 No drivers or combos yet. Import a schedule or add them from the panel on the left.
+                    </div>
+                </div>
+
+                <!-- Current Standings -->
+                <div class="bg-card-dark rounded-2xl border border-gray-800-force shadow-xl overflow-hidden">
+                    <div class="px-5 py-4 bg-header-dark border-b border-gray-800-force flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Current Standings</span>
+                            <span class="text-[10px] text-gray-500">Ranked by total time, least to greatest</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="exportCsvBtn" class="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-input-dark border border-gray-800-force hover:border-red-600 hover:text-white text-gray-300 transition-colors">
+                                Export CSV
+                            </button>
+                            <button id="exportJsonBtn" class="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-input-dark border border-gray-800-force hover:border-red-600 hover:text-white text-gray-300 transition-colors">
+                                Export JSON
+                            </button>
+                        </div>
+                    </div>
+                    <div id="standingsList" class="divide-y divide-gray-800">
+                        <!-- Generated Dynamically by tracking.js -->
+                    </div>
+                    <div id="standingsEmptyState" class="p-12 text-center text-gray-500 text-xs">
+                        🏁 Standings will appear once at least one time is entered.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Links the tracking script file logic -->
+    <script src="tracking.js"></script>
+</body>
+</html>
