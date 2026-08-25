@@ -182,14 +182,26 @@ Conduct a Time Atack Exhibition for bragging rights. Each driver will get an equ
 
 <h3>Proposed Format</h3>
 <pre class="mermaid">
-  flowchart LR
+  graph LR
+    %% Row 1: Setup
     A["Car & Track (x) Selected"] --> B["Driver (y) Start"]
     B --> C["Acclimation Laps/Time (z)"]
-    C --> D["Hot Laps/Time (z)"]
-    D --> E[Time Recorded]
-    E --> F{All drivers done?}
-    F -->|No, next driver| B
-    F -->|Yes| A
+
+    A ~~~ D
+    D ~~~ G
+
+    C --> D["Hot Laps/Time (z)"] --> E[Time Recorded]
+    F ~~~ B
+    G ~~~ A
+    E ~~~ B
+
+    E --> F
+    F -->|Yes| G
+
+    F{All drivers<br>done?} -->|No, Next Driver| B
+    G{All Combos<br>done?} -->|No, Next Combo| A
+
+
 </pre>
 
 <h3>Event Time Calculator</h3>
