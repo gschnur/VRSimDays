@@ -36,6 +36,7 @@ let combos = [];
 let drivers = [];
 let nextComboKey = 1;
 let nextDriverId = 1;
+let currentComboSpotlightIndex = 0;
 
 // Document Object Selectors
 const carSelect = document.getElementById("carSelect");
@@ -49,6 +50,17 @@ const importFileName = document.getElementById("importFileName");
 const trackingTableHead = document.getElementById("trackingTableHead");
 const trackingTableBody = document.getElementById("trackingTableBody");
 const emptyState = document.getElementById("emptyState");
+
+const comboSpotlightEmpty = document.getElementById("comboSpotlightEmpty");
+const comboSpotlightContent = document.getElementById("comboSpotlightContent");
+const comboSpotlightImg = document.getElementById("comboSpotlightImg");
+const comboSpotlightNoImage = document.getElementById("comboSpotlightNoImage");
+const comboSpotlightCar = document.getElementById("comboSpotlightCar");
+const comboSpotlightTrack = document.getElementById("comboSpotlightTrack");
+const comboSpotlightParTime = document.getElementById("comboSpotlightParTime");
+const comboSpotlightCounter = document.getElementById("comboSpotlightCounter");
+const comboSpotlightPrevBtn = document.getElementById("comboSpotlightPrevBtn");
+const comboSpotlightNextBtn = document.getElementById("comboSpotlightNextBtn");
 
 const standingsList = document.getElementById("standingsList");
 const standingsEmptyState = document.getElementById("standingsEmptyState");
@@ -84,6 +96,8 @@ function init() {
     if (exportJsonBtn) exportJsonBtn.addEventListener("click", exportStandingsJSON);
     if (exportTrackingCsvBtn) exportTrackingCsvBtn.addEventListener("click", exportTrackingCSV);
     if (exportTrackingJsonBtn) exportTrackingJsonBtn.addEventListener("click", exportTrackingJSON);
+    if (comboSpotlightPrevBtn) comboSpotlightPrevBtn.addEventListener("click", showPreviousComboSpotlight);
+    if (comboSpotlightNextBtn) comboSpotlightNextBtn.addEventListener("click", showNextComboSpotlight);
 
     loadState();
     renderAll();
@@ -151,17 +165,84 @@ function addCombo() {
         driver.times[key] = { raw: "", seconds: null };
     });
 
+    currentComboSpotlightIndex = combos.length - 1;
     renderAll();
     saveState();
 }
 
 function removeCombo(key) {
+    const removedIndex = combos.findIndex(c => c.key === key);
     combos = combos.filter(c => c.key !== key);
     drivers.forEach(driver => {
         delete driver.times[key];
     });
+    if (removedIndex !== -1 && removedIndex <= currentComboSpotlightIndex) {
+        currentComboSpotlightIndex = Math.max(0, currentComboSpotlightIndex - 1);
+    }
     renderAll();
     saveState();
+}
+
+// ---------- Combo Spotlight (track image + estimated lap time) ----------
+
+// Track names are stored as "Track Base Name - Config Name". Image files are
+// named "TrackBaseName-ConfigName.png" (spaces stripped from each segment).
+function getTrackImagePath(trackName) {
+    if (!trackName) return "./trackName.png";
+    const segments = trackName.split(" - ").map(part => part.replace(/\s+/g, ""));
+    return `./${segments.join("-")}.png`;
+}
+
+function showPreviousComboSpotlight() {
+    if (combos.length === 0) return;
+    currentComboSpotlightIndex = (currentComboSpotlightIndex - 1 + combos.length) % combos.length;
+    renderComboSpotlight();
+}
+
+function showNextComboSpotlight() {
+    if (combos.length === 0) return;
+    currentComboSpotlightIndex = (currentComboSpotlightIndex + 1) % combos.length;
+    renderComboSpotlight();
+}
+
+function handleComboImageError(imgEl) {
+    imgEl.classList.add("hidden");
+    if (comboSpotlightNoImage) comboSpotlightNoImage.classList.remove("hidden");
+}
+
+function renderComboSpotlight() {
+    if (!comboSpotlightContent || !comboSpotlightEmpty) return;
+
+    if (combos.length === 0) {
+        comboSpotlightContent.classList.add("hidden");
+        comboSpotlightEmpty.classList.remove("hidden");
+        comboSpotlightCounter.textContent = "Combo 0 of 0";
+        return;
+    }
+
+    if (currentComboSpotlightIndex >= combos.length) {
+        currentComboSpotlightIndex = combos.length - 1;
+    }
+    if (currentComboSpotlightIndex < 0) {
+        currentComboSpotlightIndex = 0;
+    }
+
+    comboSpotlightEmpty.classList.add("hidden");
+    comboSpotlightContent.classList.remove("hidden");
+
+    const combo = combos[currentComboSpotlightIndex];
+
+    comboSpotlightImg.classList.remove("hidden");
+    comboSpotlightNoImage.classList.add("hidden");
+    comboSpotlightImg.src = getTrackImagePath(combo.trackName);
+
+    comboSpotlightCar.textContent = combo.carName;
+    comboSpotlightTrack.textContent = combo.trackName;
+    comboSpotlightParTime.textContent = typeof combo.parTimeSeconds === "number"
+        ? formatSecondsToMMSS(combo.parTimeSeconds)
+        : "--";
+
+    comboSpotlightCounter.textContent = `Combo ${currentComboSpotlightIndex + 1} of ${combos.length}`;
 }
 
 // ---------- Driver management ----------
@@ -244,6 +325,7 @@ function applyImportedSchedule(data) {
     drivers = [];
     nextComboKey = 1;
     nextDriverId = 1;
+    currentComboSpotlightIndex = 0;
 
     const orderedCombos = [...data.combos].sort((a, b) => (a.comboNumber || 0) - (b.comboNumber || 0));
     orderedCombos.forEach(combo => {
@@ -333,6 +415,7 @@ function clearSavedState() {
     drivers = [];
     nextComboKey = 1;
     nextDriverId = 1;
+    currentComboSpotlightIndex = 0;
     updateAutosaveStatus(null);
     renderAll();
 }
@@ -494,6 +577,7 @@ function renderAll() {
     renderTableHead();
     renderTableBody();
     renderStandings();
+    renderComboSpotlight();
 }
 
 function renderTableHead() {
