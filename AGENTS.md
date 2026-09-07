@@ -34,9 +34,9 @@ Car and track data is **duplicated** in two places:
 - `app.js` — `CARS` and `TRACKS` arrays (calculator)
 - `tracking.js` — same `CARS` and `TRACKS` arrays (tracker)
 
-Any change to a car name, track name, id, offset, or base time must be applied to **both** files. The CSV files (`WebApp/originalTableSourceData/Cars.csv`, `WebApp/originalTableSourceData/Traks.csv`) are reference data only — they are not read at runtime.
+Any change to a car name, track name, id, offset, or base time must be applied to **both** files. The CSV files (`docs`, `docs`) are reference data only — they are not read at runtime.
 
-Track image filenames follow the pattern `<TrackName>-<Config>.png` with spaces removed (e.g. `WebApp/trackImages/LimeRockPark-GrandPrix.png`). The `getTrackImagePath()` function in `tracking.js` derives the path from the track name string by splitting on `" - "` and stripping spaces.
+Track image filenames follow the pattern `<TrackName>-<Config>.png` with spaces removed (e.g. `docs`). The `getTrackImagePath()` function in `tracking.js` derives the path from the track name string by splitting on `" - "` and stripping spaces.
 
 ## Key behaviors
 
