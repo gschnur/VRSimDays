@@ -46,11 +46,11 @@
 
 <div id="log"></div>
 
+<script src="../client/let_client.js"></script>
 <script>
-// Phase 6: protocol handling inline. Phase 7 moves it into client/let_client.js.
+// UI only: all protocol handling lives in client/let_client.js.
 const $ = (id) => document.getElementById(id);
-let ws = null;
-let state = { snapshot: null, lastSeq: null, iracingConnected: null, clients: null };
+let client = null;
 
 const fmt = (t) => (t == null ? "-" : t.toFixed(3));
 const fmtLap = (lap) => (lap ? `#${lap.lap_number} ${fmt(lap.lap_time)}${lap.valid ? "" : " (invalid)"}` : "-");
@@ -61,69 +61,44 @@ function log(text) {
   el.textContent = `${new Date().toLocaleTimeString()} ${text}\n` + el.textContent.slice(0, 20000);
 }
 
+function setBadge(id, text, ok) {
+  $(id).textContent = text;
+  $(id).className = ok ? "ok" : "bad";
+}
+
 function render() {
-  const s = state.snapshot || {};
-  $("t-driver").textContent = s.driver_name ?? "-";
+  const st = client ? client.state : {};
+  const s = st.snapshot || {};
+  $("t-driver").textContent = st.driverName ?? "-";
   $("t-current").textContent = s.current_lap ?? "-";
   $("t-last").textContent = fmtLap(s.last_lap);
   $("t-best").textContent = fmtLap(s.best_lap);
   $("t-cursec").textContent = fmtList(s.current_lap_sectors);
   $("t-bestsec").textContent = fmtList(s.best_sector_times);
   $("t-optimal").textContent = fmt(s.optimal_lap_time);
-  $("t-seq").textContent = state.lastSeq ?? "-";
-  $("ir-state").textContent = state.iracingConnected == null ? "?" : state.iracingConnected ? "connected" : "disconnected";
-  $("ir-state").className = state.iracingConnected ? "ok" : "bad";
-  $("clients").textContent = state.clients ?? "-";
+  $("t-seq").textContent = st.lastSeq ?? "-";
+  setBadge("ws-state", st.connected ? "open" : "closed", st.connected);
+  setBadge("ir-state", st.iracingConnected == null ? "?" : st.iracingConnected ? "connected" : "disconnected", st.iracingConnected);
+  $("clients").textContent = st.clients ?? "-";
 }
 
-function send(type, data = {}) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) { log("! not connected"); return; }
-  ws.send(JSON.stringify({ type, data }));
-}
-
-function onMessage(msg) {
-  const d = msg.data || {};
-  if (msg.seq != null) state.lastSeq = Math.max(state.lastSeq ?? 0, msg.seq);
-  switch (msg.type) {
-    case "hello":
-      state.iracingConnected = d.iracing_connected; state.clients = d.clients; break;
-    case "snapshot":
-      state.snapshot = d; state.iracingConnected = d.iracing_connected; state.clients = d.clients;
-      state.lastSeq = Math.max(state.lastSeq ?? 0, d.as_of_seq ?? 0); break;
-    case "status":
-      state.iracingConnected = d.iracing_connected; state.clients = d.clients; break;
-    case "sector_update":
-      if (state.snapshot) Object.assign(state.snapshot, {
-        driver_name: d.driver_name, current_lap_sectors: d.current_lap_sectors,
-        best_sector_times: d.best_sector_times, optimal_lap_time: d.optimal_lap_time });
-      break;
-    case "lap_update":
-      if (state.snapshot) {
-        const lap = { driver_name: d.driver_name, lap_number: d.lap_number, lap_time: d.lap_time, sectors: d.sectors, valid: d.valid };
-        Object.assign(state.snapshot, {
-          driver_name: d.driver_name, last_lap: lap, current_lap: d.current_lap, current_lap_sectors: [],
-          best_sector_times: d.best_sector_times, optimal_lap_time: d.optimal_lap_time });
-        if (d.best_lap_number === d.lap_number) state.snapshot.best_lap = lap;
-      }
-      break;
+function start() {
+  if (client) client.close();
+  client = new IRLDS.LetClient({ url: $("url").value });
+  for (const type of IRLDS.LetClient.EVENTS) {
+    client.on(type, (data, msg) => {
+      log(msg ? `< ${JSON.stringify(msg)}` : `[${type}] ${JSON.stringify(data)}`);
+      render();
+    });
   }
+  client.connect();
   render();
 }
 
-$("connect").onclick = () => {
-  if (ws) ws.close();
-  ws = new WebSocket($("url").value);
-  $("ws-state").textContent = "connecting";
-  ws.onopen = () => { $("ws-state").textContent = "open"; $("ws-state").className = "ok"; log("open"); };
-  ws.onclose = (e) => { $("ws-state").textContent = "closed"; $("ws-state").className = "bad"; log(`close ${e.code}`); };
-  ws.onmessage = (e) => {
-    log(`< ${e.data}`);
-    try { onMessage(JSON.parse(e.data)); } catch (err) { console.warn("bad message", err); }
-  };
-};
-$("reset").onclick = () => send("reset", { driver_name: $("driver").value });
-$("pits").onclick = () => send("return_to_pits");
-$("snapshot").onclick = () => send("get_snapshot");
+$("connect").onclick = start;
+$("reset").onclick = () => client && client.reset($("driver").value);
+$("pits").onclick = () => client && client.returnToPits();
+$("snapshot").onclick = () => client && client.getSnapshot();
 render();
 </script>
 </body>

@@ -120,10 +120,30 @@ End-to-end:
 4. Verify out-lap handling and an invalid lap (cut/off-track) behave per the defaults above.
 5. Verify the pit hotkey (and fallback, if configured).
 
+## Browser client (`client/let_client.js`)
+
+A dependency-free classic script shared by LET and the dev test page. In the browser it
+exposes `window.IRLDS.LetClient`; in Node, `require("./client/let_client.js")`.
+
+```js
+const client = new IRLDS.LetClient({ url: "ws://127.0.0.1:8765" });
+client.on("lap_update", (data) => render(client.state.snapshot));
+client.connect();
+client.reset("Jane Doe");      // false (and an "error" event, code "not_connected") if disconnected
+client.returnToPits();
+client.getSnapshot();
+```
+
+It reconnects with exponential backoff and jitter, rebuilds state from `hello` + `snapshot`
+after every (re)connect, drops stale/duplicate `seq`, and on a `seq` gap emits `"gap"` and
+requests a snapshot. Commands are never queued while disconnected. `client.state.snapshot`
+is kept up to date by merging `sector_update` / `lap_update` / `status` broadcasts.
+
 ## Tests
 
 ```bash
 python -m pytest
+node --test tests/js/*.test.js      # Node 18+; no npm install needed
 ```
 
 ## Known limitations
