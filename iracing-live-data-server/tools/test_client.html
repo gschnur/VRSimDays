@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IRLDS Test Client</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 16px; background: #111; color: #ddd; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  input, button { font: inherit; padding: 4px 8px; }
+  table { border-collapse: collapse; margin-bottom: 12px; }
+  th, td { border: 1px solid #444; padding: 4px 10px; text-align: left; }
+  th { background: #222; }
+  .ok { color: #6c6; } .bad { color: #e66; }
+  #log { height: 300px; overflow: auto; background: #000; padding: 8px; font: 12px ui-monospace, monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>IRLDS Test Client</h1>
+
+<div class="row">
+  <label>URL <input id="url" value="ws://127.0.0.1:8765" size="24"></label>
+  <button id="connect">Connect</button>
+  <span>WS: <b id="ws-state" class="bad">closed</b></span>
+  <span>iRacing: <b id="ir-state" class="bad">?</b></span>
+  <span>Clients: <b id="clients">-</b></span>
+</div>
+
+<div class="row">
+  <label>Driver <input id="driver" placeholder="Driver name" maxlength="64"></label>
+  <button id="reset">Reset</button>
+  <button id="pits">Return to pits</button>
+  <button id="snapshot">Get snapshot</button>
+</div>
+
+<table>
+  <tr><th>Driver</th><td id="t-driver">-</td></tr>
+  <tr><th>Current lap</th><td id="t-current">-</td></tr>
+  <tr><th>Last lap</th><td id="t-last">-</td></tr>
+  <tr><th>Best lap</th><td id="t-best">-</td></tr>
+  <tr><th>Current lap sectors</th><td id="t-cursec">-</td></tr>
+  <tr><th>Best sectors</th><td id="t-bestsec">-</td></tr>
+  <tr><th>Optimal</th><td id="t-optimal">-</td></tr>
+  <tr><th>Last seq</th><td id="t-seq">-</td></tr>
+</table>
+
+<div id="log"></div>
+
+<script>
+// Phase 6: protocol handling inline. Phase 7 moves it into client/let_client.js.
+const $ = (id) => document.getElementById(id);
+let ws = null;
+let state = { snapshot: null, lastSeq: null, iracingConnected: null, clients: null };
+
+const fmt = (t) => (t == null ? "-" : t.toFixed(3));
+const fmtLap = (lap) => (lap ? `#${lap.lap_number} ${fmt(lap.lap_time)}${lap.valid ? "" : " (invalid)"}` : "-");
+const fmtList = (xs) => (xs && xs.length ? xs.map(fmt).join(" | ") : "-");
+
+function log(text) {
+  const el = $("log");
+  el.textContent = `${new Date().toLocaleTimeString()} ${text}\n` + el.textContent.slice(0, 20000);
+}
+
+function render() {
+  const s = state.snapshot || {};
+  $("t-driver").textContent = s.driver_name ?? "-";
+  $("t-current").textContent = s.current_lap ?? "-";
+  $("t-last").textContent = fmtLap(s.last_lap);
+  $("t-best").textContent = fmtLap(s.best_lap);
+  $("t-cursec").textContent = fmtList(s.current_lap_sectors);
+  $("t-bestsec").textContent = fmtList(s.best_sector_times);
+  $("t-optimal").textContent = fmt(s.optimal_lap_time);
+  $("t-seq").textContent = state.lastSeq ?? "-";
+  $("ir-state").textContent = state.iracingConnected == null ? "?" : state.iracingConnected ? "connected" : "disconnected";
+  $("ir-state").className = state.iracingConnected ? "ok" : "bad";
+  $("clients").textContent = state.clients ?? "-";
+}
+
+function send(type, data = {}) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { log("! not connected"); return; }
+  ws.send(JSON.stringify({ type, data }));
+}
+
+function onMessage(msg) {
+  const d = msg.data || {};
+  if (msg.seq != null) state.lastSeq = Math.max(state.lastSeq ?? 0, msg.seq);
+  switch (msg.type) {
+    case "hello":
+      state.iracingConnected = d.iracing_connected; state.clients = d.clients; break;
+    case "snapshot":
+      state.snapshot = d; state.iracingConnected = d.iracing_connected; state.clients = d.clients;
+      state.lastSeq = Math.max(state.lastSeq ?? 0, d.as_of_seq ?? 0); break;
+    case "status":
+      state.iracingConnected = d.iracing_connected; state.clients = d.clients; break;
+    case "sector_update":
+      if (state.snapshot) Object.assign(state.snapshot, {
+        driver_name: d.driver_name, current_lap_sectors: d.current_lap_sectors,
+        best_sector_times: d.best_sector_times, optimal_lap_time: d.optimal_lap_time });
+      break;
+    case "lap_update":
+      if (state.snapshot) {
+        const lap = { driver_name: d.driver_name, lap_number: d.lap_number, lap_time: d.lap_time, sectors: d.sectors, valid: d.valid };
+        Object.assign(state.snapshot, {
+          driver_name: d.driver_name, last_lap: lap, current_lap: d.current_lap, current_lap_sectors: [],
+          best_sector_times: d.best_sector_times, optimal_lap_time: d.optimal_lap_time });
+        if (d.best_lap_number === d.lap_number) state.snapshot.best_lap = lap;
+      }
+      break;
+  }
+  render();
+}
+
+$("connect").onclick = () => {
+  if (ws) ws.close();
+  ws = new WebSocket($("url").value);
+  $("ws-state").textContent = "connecting";
+  ws.onopen = () => { $("ws-state").textContent = "open"; $("ws-state").className = "ok"; log("open"); };
+  ws.onclose = (e) => { $("ws-state").textContent = "closed"; $("ws-state").className = "bad"; log(`close ${e.code}`); };
+  ws.onmessage = (e) => {
+    log(`< ${e.data}`);
+    try { onMessage(JSON.parse(e.data)); } catch (err) { console.warn("bad message", err); }
+  };
+};
+$("reset").onclick = () => send("reset", { driver_name: $("driver").value });
+$("pits").onclick = () => send("return_to_pits");
+$("snapshot").onclick = () => send("get_snapshot");
+render();
+</script>
+</body>
+</html>
