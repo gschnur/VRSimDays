@@ -81,9 +81,26 @@ class IRacingSource:
             return
         self._last_session_update = update
         self._boundaries = self._read_boundaries()
-        # TODO(verify): no track identity key is on the permitted list (§7.1), so the
-        # signature is derived from the sector layout. It changes when the layout changes.
-        self._session_sig = "sectors:" + ",".join(f"{b:.6f}" for b in self._boundaries)
+        self._session_sig = self._read_signature(self._boundaries)
+
+    def _read_signature(self, boundaries: list[float]) -> str:
+        """Track identity from WeekendInfo.TrackID (unique per track configuration).
+
+        Falls back to the sector layout if WeekendInfo is unavailable.
+        """
+        try:
+            weekend = self._ir["WeekendInfo"]
+            track_id = weekend["TrackID"] if weekend else None
+            if track_id is not None:
+                sig = f"track:{track_id}"
+                if sig != self._session_sig:
+                    name = weekend.get("TrackDisplayName") or weekend.get("TrackName") or "?"
+                    config = weekend.get("TrackConfigName") or ""
+                    log.info("Track: %s %s (TrackID %s)", name, config, track_id)
+                return sig
+        except Exception as e:
+            log.debug("WeekendInfo unreadable: %s", e)
+        return "sectors:" + ",".join(f"{b:.6f}" for b in boundaries)
 
     def _read_boundaries(self) -> list[float]:
         reason = "missing"

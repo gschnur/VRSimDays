@@ -111,6 +111,7 @@ with `invalid_driver_name` and nothing changes. Before the first reset it is `nu
 pyirsdk / iRacing behaviour:
 
 1. `SplitTimeInfo.Sectors` is present and sensible for your tracks (count, first boundary `0.0`).
+   `WeekendInfo.TrackID` is present and changes between track configurations (log line `Track: ...`).
 2. `LapLastLapTime` becomes valid exactly when `LapCompleted` increments (same tick vs one tick later).
 3. `LapLastLapTime` reports `<= 0` for invalid laps in Time Trial.
 4. `OnPitRoad` / `IsOnTrack` behave as expected when returning to the pits in Test Drive / Time Trial.
@@ -123,9 +124,9 @@ Implementation notes tied to the items above:
   to 2 s of session time, `LAST_LAP_GRACE_S` in `tracker.py`) before completing a lap,
   so a value published a few ticks late is still attributed correctly. A WARNING is
   logged if it never changes within the grace window.
-- `TODO(verify)`: no track-identity session key is on the permitted pyirsdk list, so the
-  session signature is derived from the sector layout. A track change with an identical
-  layout does not by itself reset the tracker (leaving the car/pits still re-arms it).
+- Track changes are detected from `WeekendInfo.TrackID` (unique per track
+  configuration); a change sets the new sector boundaries and re-arms the tracker. If
+  `WeekendInfo` is unavailable, the sector layout is used as the signature instead.
 
 End-to-end:
 

@@ -31,6 +31,8 @@ class FakeIRSDK:
             "OnPitRoad": False,
             "IsOnTrack": True,
             "SplitTimeInfo": {"Sectors": [{"SectorNum": 0, "SectorStartPct": 0.0}, {"SectorNum": 1, "SectorStartPct": 0.4}]},
+            "WeekendInfo": {"TrackID": 341, "TrackName": "spa up", "TrackDisplayName": "Circuit de Spa-Francorchamps",
+                            "TrackConfigName": "Grand Prix Pits"},
         }
         FakeIRSDK.instances.append(self)
 
@@ -133,7 +135,8 @@ def test_session_info_only_reread_on_update(irsdk: type[FakeIRSDK]) -> None:
     ir.last_session_info_update += 1
     src.poll()
     assert src.sector_boundaries() == [0.0, 0.3, 0.7]
-    assert src.session_signature() != sig
+    # Same track: signature unchanged (BoundarySyncSource still sees the new boundaries).
+    assert src.session_signature() == sig
 
 
 def test_missing_pyirsdk(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -141,3 +144,31 @@ def test_missing_pyirsdk(monkeypatch: pytest.MonkeyPatch) -> None:
     src = IRacingSource()
     assert src.poll() is None
     assert src.poll() is None
+
+
+def test_signature_is_track_id(irsdk: type[FakeIRSDK]) -> None:
+    src = IRacingSource()
+    src.poll()
+    assert src.session_signature() == "track:341"
+
+
+def test_track_change_with_same_layout_changes_signature(irsdk: type[FakeIRSDK]) -> None:
+    src = IRacingSource()
+    src.poll()
+    ir = irsdk.instances[0]
+    ir.vars["WeekendInfo"] = {"TrackID": 342, "TrackName": "spa combined", "TrackConfigName": "Combined"}
+    ir.last_session_info_update += 1
+    src.poll()
+    assert src.sector_boundaries() == [0.0, 0.4]
+    assert src.session_signature() == "track:342"
+
+
+@pytest.mark.parametrize("weekend", [None, {}, {"TrackName": "no id"}])
+def test_signature_falls_back_to_sector_layout(irsdk: type[FakeIRSDK], weekend: Any) -> None:
+    src = IRacingSource()
+    src.poll()
+    ir = irsdk.instances[0]
+    ir.vars["WeekendInfo"] = weekend
+    ir.last_session_info_update += 1
+    src.poll()
+    assert src.session_signature().startswith("sectors:")

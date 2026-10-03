@@ -294,7 +294,7 @@ Only these calls and keys may be used. Anything else requires a `TODO(verify)`.
 | Connection checks | `ir.is_initialized`, `ir.is_connected` |
 | Consistent read of one tick | `ir.freeze_var_buffer_latest()` |
 | Telemetry vars | `ir['SessionTime']`, `['LapDistPct']`, `['LapCompleted']`, `['Lap']`, `['LapLastLapTime']`, `['OnPitRoad']`, `['IsOnTrack']`, `['IsOnTrackCar']` |
-| Session info | `ir['SplitTimeInfo']['Sectors']` (entries with `SectorStartPct`), `ir['DriverInfo']['DriverCarIdx']` if ever needed |
+| Session info | `ir['SplitTimeInfo']['Sectors']` (entries with `SectorStartPct`), `ir['WeekendInfo']` (`TrackID` for session signature; `TrackName` / `TrackDisplayName` / `TrackConfigName` for logging only — added after rev 4 with user approval), `ir['DriverInfo']['DriverCarIdx']` if ever needed |
 | Session-info change detection | `ir.last_session_info_update` |
 | Teardown | `ir.shutdown()` |
 
