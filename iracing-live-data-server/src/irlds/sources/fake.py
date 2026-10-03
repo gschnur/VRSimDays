@@ -76,6 +76,7 @@ class FakeSource:
         if self.include_teleport and self._tick == 500:
             lap_progress = 0.5
 
+        self._tick += 1
         return TelemetryFrame(
             session_time=session_time,
             lap_dist_pct=lap_progress,
