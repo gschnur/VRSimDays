@@ -61,33 +61,50 @@ def _parse_section(d: dict[str, Any], cls: type, overrides: dict[str, Any] | Non
     return cls(**kwargs)
 
 
-def load_config(path: str = "config.toml") -> Config:
+def _env_overrides() -> tuple[dict[str, Any], dict[str, Any]]:
     import os
 
-    if tomllib is None:
-        raise RuntimeError("tomllib / tomli is required to load config")
+    server: dict[str, Any] = {}
+    if os.environ.get("IRLDS_HOST"):
+        server["host"] = os.environ["IRLDS_HOST"]
+    if os.environ.get("IRLDS_PORT"):
+        server["port"] = int(os.environ["IRLDS_PORT"])
+    log: dict[str, Any] = {}
+    if os.environ.get("IRLDS_LOG_LEVEL"):
+        log["level"] = os.environ["IRLDS_LOG_LEVEL"]
+    return server, log
 
+
+def _validate(cfg: Config) -> Config:
+    if not (0 <= cfg.server.port <= 65535):
+        raise ValueError(f"server.port out of range: {cfg.server.port}")
+    if cfg.scraper.poll_hz <= 0:
+        raise ValueError(f"scraper.poll_hz must be > 0: {cfg.scraper.poll_hz}")
+    for name in ("key_sequence", "fallback_key_sequence"):
+        seq = getattr(cfg.pit_actions, name)
+        if not isinstance(seq, list) or not all(
+            isinstance(step, list) and step and all(isinstance(k, str) for k in step) for step in seq
+        ):
+            raise ValueError(f"pit_actions.{name} must be a list of non-empty lists of key names")
+    if not isinstance(cfg.server.allowed_origins, list):
+        raise ValueError("server.allowed_origins must be a list")
+    return cfg
+
+
+def load_config(path: str = "config.toml") -> Config:
+    """Load config.toml (missing file = defaults), then apply IRLDS_* env overrides."""
+    raw: dict[str, Any] = {}
     p = Path(path)
-    if not p.exists():
-        return Config()
+    if p.exists():
+        if tomllib is None:
+            raise RuntimeError("tomllib / tomli is required to load config")
+        with open(p, "rb") as f:
+            raw = tomllib.load(f)
 
-    with open(p, "rb") as f:
-        raw = tomllib.load(f)
-
-    server_overrides = {
-        "host": os.environ.get("IRLDS_HOST"),
-        "port": int(os.environ["IRLDS_PORT"]) if "IRLDS_PORT" in os.environ else None,
-    }
-    server_overrides = {k: v for k, v in server_overrides.items() if v is not None}
-
-    log_overrides = {}
-    ll = os.environ.get("IRLDS_LOG_LEVEL")
-    if ll:
-        log_overrides["level"] = ll
-
-    return Config(
+    server_overrides, log_overrides = _env_overrides()
+    return _validate(Config(
         server=_parse_section(raw.get("server", {}), ServerConfig, server_overrides or None),
         scraper=_parse_section(raw.get("scraper", {}), ScraperConfig),
         pit_actions=_parse_section(raw.get("pit_actions", {}), PitActionsConfig),
         logging=_parse_section(raw.get("logging", {}), LoggingConfig, log_overrides or None),
-    )
+    ))

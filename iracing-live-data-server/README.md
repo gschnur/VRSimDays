@@ -84,6 +84,11 @@ Server → client:
 
 Client → server: `reset {driver_name}`, `return_to_pits {}`, `get_snapshot {}`, `ping {}`.
 
+Lap numbers are relative to the last `reset` (1 = first counted lap). Sector times
+arrive live in `sector_update`, but `best_sector_times` / `optimal_lap_time` are only
+updated when a lap completes **valid** — iRacing flags invalid laps at the line, so
+sectors from an invalid lap never become bests.
+
 `driver_name` is trimmed and must be 1–64 characters; otherwise the reset is rejected
 with `invalid_driver_name` and nothing changes. Before the first reset it is `null`.
 
@@ -92,7 +97,7 @@ with `invalid_driver_name` and nothing changes. Before the first reset it is `nu
 | # | Question | Default |
 |---|---|---|
 | 1 | Pit-return hotkey | `alt+r` placeholder, configurable; fallback empty |
-| 2 | Count the out-lap? | No (`count_outlap = false`) |
+| 2 | Count the out-lap? | No (`count_outlap = false`). If `true`, the out-lap is reported with its iRacing lap time but no sector times (its start is unknown). |
 | 3 | Invalid laps | Excluded from bests/optimal; reported with `valid: false` |
 | 4 | Sector count | From `SplitTimeInfo`; single-sector fallback if missing |
 | 5 | Network exposure | Localhost only; `0.0.0.0` opt-in |
@@ -111,6 +116,16 @@ pyirsdk / iRacing behaviour:
 4. `OnPitRoad` / `IsOnTrack` behave as expected when returning to the pits in Test Drive / Time Trial.
 5. Reported lap times match the iRacing HUD to the millisecond; sector sums equal lap time.
 6. The pit hotkey in `config.toml` matches your actual controls.
+
+Implementation notes tied to the items above:
+
+- Item 2: the tracker waits for `LapLastLapTime` to change after the S/F crossing (up
+  to 2 s of session time, `LAST_LAP_GRACE_S` in `tracker.py`) before completing a lap,
+  so a value published a few ticks late is still attributed correctly. A WARNING is
+  logged if it never changes within the grace window.
+- `TODO(verify)`: no track-identity session key is on the permitted pyirsdk list, so the
+  session signature is derived from the sector layout. A track change with an identical
+  layout does not by itself reset the tracker (leaving the car/pits still re-arms it).
 
 End-to-end:
 

@@ -36,8 +36,8 @@ class FakeSource:
         if self.sector_splits:
             prev = 0.0
             for sp in self.sector_splits:
-                frac = (sp - prev)
-                sector_times.append(self.lap_time * frac)
+                sector_times.append(self.lap_time * (sp - prev))
+                prev = sp
             frac = 1.0 - self.sector_splits[-1]
             sector_times.append(self.lap_time * frac)
         else:

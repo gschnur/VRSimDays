@@ -14,4 +14,5 @@ def setup_logging(level: str = "INFO", log_file: str | None = None) -> None:
         format="%(asctime)s %(levelname)-8s %(name)s %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
         handlers=handlers,
+        force=True,
     )

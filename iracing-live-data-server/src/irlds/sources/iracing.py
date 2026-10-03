@@ -1,129 +1,140 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from irlds.models import TelemetryFrame
-from irlds.sources.base import TelemetrySource
 
 log = logging.getLogger("irlds.sources.iracing")
 
+SINGLE_SECTOR = [0.0]
+
 
 class IRacingSource:
-    """pyirsdk-backed telemetry source. Only uses the permitted API surface per spec §7.1."""
+    """pyirsdk-backed telemetry source. Only uses the permitted API surface (§7.1).
+
+    Blocking; called from the scraper thread only.
+    """
 
     def __init__(self) -> None:
-        self._ir: object | None = None
-        self._initialized = False
-        self._last_session_update: int = 0
+        self._ir: Any = None
+        self._import_failed = False
+        self._connected = False
+        self._last_session_update: int | None = None
         self._boundaries: list[float] | None = None
         self._session_sig: str = ""
+        self._warned_sigs: set[str] = set()
 
-    def _ensure_started(self) -> bool:
-        try:
-            import irsdk
-        except ImportError:
-            log.error("pyirsdk not installed")
-            return False
+    # ---- connection ------------------------------------------------------
 
-        if not self._initialized:
-            try:
-                self._ir = irsdk.IRSDK()
-                self._ir.startup()
-                self._initialized = True
-                log.info("pyirsdk started")
-            except Exception as e:
-                log.warning("pyirsdk startup failed: %s", e)
+    def _ensure_connected(self) -> bool:
+        if self._ir is None:
+            if self._import_failed:
                 return False
+            try:
+                import irsdk
+            except ImportError:
+                self._import_failed = True
+                log.error("pyirsdk not installed; iRacing source unavailable")
+                return False
+            self._ir = irsdk.IRSDK()
 
-        if self._ir is None:
+        ir = self._ir
+        if ir.is_initialized and ir.is_connected:
+            if not self._connected:
+                self._connected = True
+                log.info("pyirsdk connected")
+            return True
+
+        if ir.is_initialized:
+            # Was running, sim went away: shut down and retry startup on a later tick.
+            self._disconnect()
             return False
 
-        if not getattr(self._ir, "is_initialized", False):
-            return False
-
-        if not getattr(self._ir, "is_connected", False):
-            return False
-
-        last_update = getattr(self._ir, "last_session_info_update", 0)
-        if last_update and last_update != self._last_session_update:
-            self._last_session_update = last_update
-            self._refresh_session_info()
-
-        return True
-
-    def _refresh_session_info(self) -> None:
-        if self._ir is None:
-            return
         try:
-            split_info = self._ir["SplitTimeInfo"]
-            if split_info and "Sectors" in split_info:
-                sectors = split_info["Sectors"]
-                if sectors and len(sectors) > 1:
-                    bounds = [s["SectorStartPct"] for s in sectors]
-                    if bounds[0] == 0.0:
-                        self._boundaries = bounds
-                        log.info("Sector boundaries updated: %s", bounds)
-                        return
+            ir.startup()
         except Exception as e:
-            log.warning("Failed to read sector boundaries: %s", e)
-        if self._boundaries is None:
-            self._boundaries = [0.0]
-            log.warning("Falling back to single-sector mode")
+            log.debug("pyirsdk startup failed: %s", e)
+            return False
+        if ir.is_initialized and ir.is_connected:
+            self._connected = True
+            log.info("pyirsdk connected")
+            return True
+        return False
+
+    def _disconnect(self) -> None:
+        if self._connected:
+            log.info("pyirsdk disconnected")
+        self._connected = False
+        self._last_session_update = None
+        if self._ir is not None:
+            try:
+                self._ir.shutdown()
+            except Exception:
+                pass
+
+    # ---- session info ----------------------------------------------------
+
+    def _maybe_refresh_session_info(self) -> None:
+        update = self._ir.last_session_info_update
+        if update == self._last_session_update:
+            return
+        self._last_session_update = update
+        self._boundaries = self._read_boundaries()
+        # TODO(verify): no track identity key is on the permitted list (§7.1), so the
+        # signature is derived from the sector layout. It changes when the layout changes.
+        self._session_sig = "sectors:" + ",".join(f"{b:.6f}" for b in self._boundaries)
+
+    def _read_boundaries(self) -> list[float]:
+        reason = "missing"
         try:
-            track = self._ir["TrackName"] if self._ir else "unknown"
-            self._session_sig = f"{track}-{self._last_session_update}"
-        except Exception:
-            self._session_sig = f"session-{self._last_session_update}"
+            split = self._ir["SplitTimeInfo"]
+            sectors = split["Sectors"] if split else None
+            if sectors:
+                bounds = [float(s["SectorStartPct"]) for s in sectors]
+                if bounds[0] == 0.0 and all(a < b for a, b in zip(bounds, bounds[1:])) and bounds[-1] < 1.0:
+                    if bounds != self._boundaries:
+                        log.info("Sector boundaries: %s", bounds)
+                    return bounds
+                reason = f"malformed {bounds}"
+        except Exception as e:
+            reason = f"unreadable ({e})"
+        sig = f"fallback:{reason}"
+        if sig not in self._warned_sigs:
+            self._warned_sigs.add(sig)
+            log.warning("SplitTimeInfo sectors %s; falling back to single-sector mode", reason)
+        return list(SINGLE_SECTOR)
+
+    # ---- TelemetrySource -------------------------------------------------
 
     def poll(self) -> TelemetryFrame | None:
-        if not self._ensure_started():
+        if not self._ensure_connected():
             return None
-
-        if self._ir is None:
-            return None
-
+        ir = self._ir
         try:
-            self._ir.freeze_var_buffer_latest()
-
-            session_time = float(self._ir["SessionTime"])
-            lap_dist_pct = float(self._ir["LapDistPct"])
-            lap_completed = int(self._ir["LapCompleted"])
-            lap_current = int(self._ir["Lap"])
-            last_lap_time = float(self._ir["LapLastLapTime"])
-            on_pit_road = bool(self._ir["OnPitRoad"])
-            is_on_track = bool(self._ir["IsOnTrack"])
-
-            if self._boundaries is None:
-                self._refresh_session_info()
-
+            ir.freeze_var_buffer_latest()
+            self._maybe_refresh_session_info()
             return TelemetryFrame(
-                session_time=session_time,
-                lap_dist_pct=lap_dist_pct,
-                lap_completed=lap_completed,
-                lap_current=lap_current,
-                last_lap_time=last_lap_time,
-                on_pit_road=on_pit_road,
-                is_on_track=is_on_track,
+                session_time=float(ir["SessionTime"]),
+                lap_dist_pct=float(ir["LapDistPct"]),
+                lap_completed=int(ir["LapCompleted"]),
+                lap_current=int(ir["Lap"]),
+                last_lap_time=float(ir["LapLastLapTime"]),
+                on_pit_road=bool(ir["OnPitRoad"]),
+                is_on_track=bool(ir["IsOnTrack"]),
                 connected=True,
             )
         except Exception as e:
-            log.debug("poll error: %s", e)
-            self._initialized = False
-            self._ir = None
+            log.warning("poll error, reconnecting: %s", e)
+            self._disconnect()
             return None
 
     def sector_boundaries(self) -> list[float] | None:
-        self._ensure_started()
         return self._boundaries
 
     def session_signature(self) -> str:
         return self._session_sig
 
     def close(self) -> None:
-        if self._ir is not None:
-            try:
-                self._ir.shutdown()
-            except Exception:
-                pass
-            self._ir = None
-            self._initialized = False
+        self._disconnect()
+        self._ir = None

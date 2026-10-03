@@ -13,17 +13,9 @@ class TestProtocolEncodeDecode:
         assert obj["data"]["server_version"] == "0.1"
         assert obj["seq"] is None
 
-    def test_broadcast_seq(self) -> None:
-        protocol.reset_seq_counter()
-        msg = protocol.encode("lap_update", {}, seq=protocol.next_seq())
-        obj = protocol.decode(msg)
-        assert obj["seq"] == 1
-
-    def test_strictly_increasing_seq(self) -> None:
-        protocol.reset_seq_counter()
-        s1 = protocol.next_seq()
-        s2 = protocol.next_seq()
-        assert s2 > s1
+    def test_broadcast_seq_round_trip(self) -> None:
+        obj = protocol.decode(protocol.encode("lap_update", {}, seq=7))
+        assert obj["seq"] == 7
 
     def test_timestamp_present(self) -> None:
         msg = protocol.encode("status", {}, seq=None)

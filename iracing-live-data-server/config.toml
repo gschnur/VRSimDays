@@ -1,7 +1,7 @@
 [server]
 host = "127.0.0.1"
 port = 8765
-allowed_origins = []
+allowed_origins = []          # added to the localhost default; add "null" to allow file:// pages
 
 [scraper]
 poll_hz = 60
@@ -10,7 +10,8 @@ count_outlap = false
 [pit_actions]
 enabled = true
 window_title = "iRacing.com Simulator"
-key_sequence = [["alt", "r"]]
+# VERIFY against your iRacing controls before relying on this.
+key_sequence = [["alt", "r"]]   # list of steps; each step is a list of keys held together
 fallback_key_sequence = []
 pre_delay_ms = 150
 failsafe = true

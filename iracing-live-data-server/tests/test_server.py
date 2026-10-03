@@ -205,6 +205,8 @@ class TestReset:
             updates = [m for m in msgs + [last] if m["type"] in ("sector_update", "lap_update")]
             assert updates
             assert all(m["data"]["driver_name"] == "Driver 2" for m in updates)
+            # Lap numbers restart after reset (D2).
+            assert min(m["data"]["lap_number"] for m in updates if m["type"] == "lap_update") == 1
 
 
 class TestMisc:

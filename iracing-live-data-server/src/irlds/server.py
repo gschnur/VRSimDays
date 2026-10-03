@@ -205,9 +205,6 @@ class IRLDSServer:
                 valid=event.valid,
             )
             stats.apply_lap(record, event.driver_name)
-            # Next lap is now in progress; its sectors start empty (§9.5 example).
-            stats.current_lap = event.lap_number + 1
-            stats.current_lap_sector_times = []
             self.broadcast("lap_update", event_to_lap_update_data(event, stats.to_snapshot()))
         elif isinstance(event, ResetCompleted):
             stats.reset(event.driver_name)
@@ -222,7 +219,7 @@ class IRLDSServer:
             self.iracing_connected = event.connected
             self.broadcast_status()
         elif isinstance(event, TrackerInvalidated):
-            stats.current_lap_sector_times = []
+            stats.discard_current_lap()
 
     async def _safe_send(self, ws: ServerConnection, msg: str) -> None:
         # Bounded so a slow requester cannot stall the event consumer.

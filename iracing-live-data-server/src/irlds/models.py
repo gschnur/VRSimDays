@@ -51,8 +51,11 @@ class SessionStats:
 
     @sector_count.setter
     def sector_count(self, value: int) -> None:
+        # Sector bests from a different layout are meaningless; start them over.
         self._sector_count = value
         self.best_sector_times = [None] * value
+        self.optimal_lap_time = None
+        self.current_lap_sector_times = []
 
     def reset(self, driver_name: str | None = None) -> None:
         self.driver_name = driver_name
@@ -66,22 +69,39 @@ class SessionStats:
         self.lap_count = 0
 
     def apply_sector(self, index: int, time: float, driver_name: str | None, lap_number: int) -> None:
+        """Record a sector of the lap in progress.
+
+        Bests are only committed when the lap completes valid (§16-3): iRacing reports
+        lap invalidity at the line, after the lap's sectors have been seen.
+        """
         if 0 <= index < self._sector_count:
+            self.current_lap = lap_number
             self.current_lap_sector_times.append(time)
-            if self.best_sector_times[index] is None or time < self.best_sector_times[index]:
-                self.best_sector_times[index] = time
-            self._update_optimal()
 
     def apply_lap(self, lap_record: LapRecord, driver_name: str | None) -> None:
         self.lap_count += 1
-        self.current_lap = lap_record.lap_number
         self.last_lap = lap_record
-        if lap_record.valid and (self.best_lap is None or lap_record.lap_time < self.best_lap.lap_time):
+        # The next lap is now in progress and has no sectors yet.
+        self.current_lap = lap_record.lap_number + 1
+        self.current_lap_sector_times = []
+        if not lap_record.valid:
+            return
+        if self.best_lap is None or lap_record.lap_time < self.best_lap.lap_time:
             self.best_lap = lap_record
             self.best_lap_number = lap_record.lap_number
+        if len(lap_record.sectors) == self._sector_count:
+            for i, sector in enumerate(lap_record.sectors):
+                best = self.best_sector_times[i]
+                if best is None or sector.time < best:
+                    self.best_sector_times[i] = sector.time
+            self._update_optimal()
+
+    def discard_current_lap(self) -> None:
+        """The lap in progress was invalidated (pit entry, teleport, disconnect)."""
+        self.current_lap_sector_times = []
 
     def _update_optimal(self) -> None:
-        if all(t is not None for t in self.best_sector_times):
+        if self.best_sector_times and all(t is not None for t in self.best_sector_times):
             self.optimal_lap_time = sum(t for t in self.best_sector_times if t is not None)
 
     def to_snapshot(self, as_of_seq: int | None = None) -> dict[str, Any]:

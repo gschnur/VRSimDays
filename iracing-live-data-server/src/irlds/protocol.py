@@ -6,18 +6,7 @@ from typing import Any
 
 from irlds.events import TrackerEvent
 
-_seq_counter = 0
-
-
-def next_seq() -> int:
-    global _seq_counter
-    _seq_counter += 1
-    return _seq_counter
-
-
-def reset_seq_counter() -> None:
-    global _seq_counter
-    _seq_counter = 0
+# The broadcast seq counter lives in IRLDSServer (server.py): one per server instance.
 
 
 def encode(msg_type: str, data: dict[str, Any] | None = None, seq: int | None = None, request_id: str | None = None) -> str:

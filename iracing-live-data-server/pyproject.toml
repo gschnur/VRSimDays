@@ -8,6 +8,7 @@ dependencies = [
     "pyirsdk",
     "pyautogui",
     "pygetwindow",
+    "tomli; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -18,3 +19,4 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]

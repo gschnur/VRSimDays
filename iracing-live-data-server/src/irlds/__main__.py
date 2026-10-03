@@ -32,7 +32,8 @@ def main() -> None:
         config.logging.level = args.log_level
     setup_logging(config.logging.level, config.logging.file or None)
 
-    logging = __import__("logging")
+    import logging
+
     log = logging.getLogger("irlds")
     log.info("IRLDS starting (config=%s, fake_source=%s)", args.config, args.fake_source)
 
