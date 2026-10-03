@@ -188,9 +188,9 @@ function removeCombo(key) {
 // Track names are stored as "Track Base Name - Config Name". Image files are
 // named "TrackBaseName-ConfigName.png" (spaces stripped from each segment).
 function getTrackImagePath(trackName) {
-    if (!trackName) return "./trackName.png";
+    if (!trackName) return "trackImages/trackName.png";
     const segments = trackName.split(" - ").map(part => part.replace(/\s+/g, ""));
-    return `./${segments.join("-")}.png`;
+    return `trackImages/${segments.join("-")}.png`;
 }
 
 function showPreviousComboSpotlight() {
