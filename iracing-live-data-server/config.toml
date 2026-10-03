@@ -1,0 +1,20 @@
+[server]
+host = "127.0.0.1"
+port = 8765
+allowed_origins = []
+
+[scraper]
+poll_hz = 60
+count_outlap = false
+
+[pit_actions]
+enabled = true
+window_title = "iRacing.com Simulator"
+key_sequence = [["alt", "r"]]
+fallback_key_sequence = []
+pre_delay_ms = 150
+failsafe = true
+
+[logging]
+level = "INFO"
+file = "irlds.log"

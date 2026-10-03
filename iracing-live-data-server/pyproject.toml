@@ -1,0 +1,20 @@
+[project]
+name = "irlds"
+version = "0.1.0"
+description = "iRacing Live Data Server — real-time lap/sector tracking via WebSocket"
+requires-python = ">=3.10"
+dependencies = [
+    "websockets>=13",
+    "pyirsdk",
+    "pyautogui",
+    "pygetwindow",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
