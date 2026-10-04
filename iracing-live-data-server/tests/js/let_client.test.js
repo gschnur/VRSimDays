@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
-const { LetClient } = require(path.join(__dirname, "..", "..", "client", "let_client.js"));
+const { LetClient } = require(path.join(__dirname, "..", "..", "..", "docs", "let_client.js"));
 
 class FakeWebSocket {
   constructor(url) {
