@@ -32,11 +32,13 @@ scraper. Stop with Ctrl+C; clients are closed with code 1001.
 
 ### Dev test page
 
-Serve the repo over HTTP so the page sends a localhost origin, then open the page:
+Serve the **repository root** over HTTP (the page loads `../../docs/let_client.js`, so
+serving only `iracing-live-data-server/` would 404 the client), then open the page:
 
 ```bash
+cd ..   # repository root
 python -m http.server 8080
-# http://localhost:8080/tools/test_client.html
+# http://localhost:8080/iracing-live-data-server/tools/test_client.html
 ```
 
 Opening the page from `file://` sends `Origin: null`; add `"null"` to
@@ -136,10 +138,12 @@ End-to-end:
 4. Verify out-lap handling and an invalid lap (cut/off-track) behave per the defaults above.
 5. Verify the pit hotkey (and fallback, if configured).
 
-## Browser client (`client/let_client.js`)
+## Browser client (`docs/let_client.js`)
 
-A dependency-free classic script shared by LET and the dev test page. In the browser it
-exposes `window.IRLDS.LetClient`; in Node, `require("./client/let_client.js")`.
+A dependency-free classic script shared by LET and the dev test page. It lives in the
+repository's `docs/` folder (not in this directory) so GitHub Pages serves it with the
+tracker; there is exactly one copy. In the browser it exposes `window.IRLDS.LetClient`;
+in Node, `require("../docs/let_client.js")` (path relative to this directory).
 
 ```js
 const client = new IRLDS.LetClient({ url: "ws://127.0.0.1:8765" });

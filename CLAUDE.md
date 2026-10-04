@@ -18,6 +18,7 @@ Run it with `cd docs && python3 -m http.server 8080`. There is no lint, build or
 - Car and track data (the `CARS` and `TRACKS` arrays) is **duplicated** in `app.js` and `tracking.js`. Any change to a name, id, offset or base time must be made in both files. The CSVs in `docs/originalTableSourceData/` are reference only and aren't read at runtime.
 - Track images are in `docs/trackImages/`. `getTrackImagePath()` in `tracking.js` builds the filename from the track name: it splits on `" - "`, strips spaces and adds `.png`.
 - Both pages autosave to localStorage (`vrSimEventCalculator_autosave_v1` and `vrSimRacingTrackingState_v1`). The calculator exports `event-schedule.json`, and the tracker can import it.
+- `let_client.js` is the IRLDS browser client (see the IRLDS section); it is owned by IRLDS but lives here so Pages can serve it.
 - Tailwind is loaded from its CDN and Mermaid v11 from jsDelivr. All styling is inline or in `<style>` blocks.
 
 ## IRLDS (`iracing-live-data-server/`)
@@ -35,7 +36,7 @@ python -m pytest                          # all Python tests (asyncio_mode=auto)
 python -m pytest tests/test_tracker.py -k some_name   # single test
 node --test tests/js/*.test.js            # JS client tests, Node 18+, no npm install
 
-python -m http.server 8080                # then open /tools/test_client.html (dev test page)
+(cd .. && python -m http.server 8080)     # repo root; open /iracing-live-data-server/tools/test_client.html
 ```
 
 The real source needs Windows with iRacing running and `pyautogui`. The tests and `--fake-source` run anywhere.
@@ -49,7 +50,7 @@ The process runs two threads, and `app.py` (`IRLDSApp.main`) wires them together
 - `BoundarySyncSource` in `app.py` wraps the source. Whenever the sector boundaries or `session_signature()` change (track change, detected from `WeekendInfo.TrackID`), it re-arms the tracker.
 - Sources implement the `TelemetrySource` protocol in `sources/base.py`: `iracing.py` (pyirsdk) and `fake.py`. `IRLDSApp` also accepts injected `source=` and `pit_actions=` objects; the tests use this.
 - Startup order: the WebSocket server starts first, then the scraper. The server works without iRacing running.
-- `client/let_client.js` is a dependency-free UMD-style script (`window.IRLDS.LetClient` in the browser, `require()` in Node). It handles reconnect with backoff, `seq` gap detection with snapshot resync, and a merged `state.snapshot`.
+- The browser client lives at **`docs/let_client.js`** (outside this directory, so GitHub Pages serves it; keep a single copy, no symlinks). `tools/test_client.html` and `tests/js/let_client.test.js` reference it there. It is a dependency-free UMD-style script (`window.IRLDS.LetClient` in the browser, `require()` in Node). It handles reconnect with backoff, `seq` gap detection with snapshot resync, and a merged `state.snapshot`.
 
 ### Invariants (from the implementation plan, `SlopAi/IMPLEMENTATION_PLAN_rev4.md` §0.2)
 
